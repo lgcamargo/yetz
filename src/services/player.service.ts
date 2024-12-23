@@ -145,4 +145,19 @@ export class PlayerService {
 
     return balancedGuilds;
   }
+
+  async resetPlayersGuild() {
+    const players = await this.playerRepository.getAllPlayers();
+
+    for (const player of players) {
+      const playerData: Prisma.PlayerUpdateInput = {
+        guild: {
+          disconnect: true,
+        },
+      };
+      await this.playerRepository.updatePlayer(player.id, playerData);
+    }
+    
+    return await this.playerRepository.getAllPlayers();
+  }
 }

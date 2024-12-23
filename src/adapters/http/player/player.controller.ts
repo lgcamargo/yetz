@@ -135,4 +135,13 @@ export class PlayerController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  public async resetPlayersGuild(req: Request, res: Response): Promise<void> {
+    try {
+      const resetedPlayers = await this.playerService.resetPlayersGuild();
+      res.status(200).json(resetedPlayers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
