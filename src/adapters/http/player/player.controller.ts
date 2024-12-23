@@ -124,8 +124,12 @@ export class PlayerController {
 
   public async balancedPlayer(req: Request, res: Response): Promise<void> {
     try {
-      const playerId = req.params.id;
-      const balancedPlayer = await this.playerService.balancedPlayer(playerId);
+      const maxGuildPlayers = req.body.maxGuildPlayers;
+      if (maxGuildPlayers < 3) {
+        res.status(400).json({ message: 'Max guild players must be at least 3' });
+        return;
+      }
+      const balancedPlayer = await this.playerService.balancedPlayer(maxGuildPlayers);
       res.status(200).json(balancedPlayer);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

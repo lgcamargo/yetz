@@ -2,6 +2,7 @@ import { Player, Prisma } from '@prisma/client';
 import { PlayerInputDTO} from '../adapters/http/player/dto/player.dto';
 import { PlayerRepository } from '../repositories/player.repository';
 import { GuildRepository } from '../repositories/guild.repository';
+import { Guild } from '../domain/entities/guild.entity';
 
 export class PlayerService {
   private playerRepository: PlayerRepository;
@@ -42,9 +43,11 @@ export class PlayerService {
     return await this.playerRepository.createPlayer(playerData);
   }
   async updatePlayer(id: string, player: PlayerInputDTO) {
-    const alreadyExists = await this.playerRepository.getPlayerByName(player.name);
-    if (alreadyExists) {
-      throw new Error(`Player with name ${player.name} already exists`);
+    if (player.name) {
+      const alreadyExists = await this.playerRepository.getPlayerByName(player.name);
+      if (alreadyExists && alreadyExists.id !== id) {
+        throw new Error(`Player with name ${player.name} already exists`);
+      }
     }
     const playerData: Prisma.PlayerUpdateInput = {
       name: player.name,
@@ -68,41 +71,78 @@ export class PlayerService {
     return await this.playerRepository.deletePlayer(id);
   }
 
-  async balancedPlayer(playerId: string) {
-    const player = await this.playerRepository.getPlayerById(playerId);
-    if (!player) {
-      throw new Error(`Player with id ${playerId} not found`);
+  async balancedPlayer(maxGuildPlayers: number) {
+    const players = await this.playerRepository.getAllPlayers();
+    if (!players || players.length === 0) {
+      throw new Error(`Players not found`);
     }
 
-    const guilds = await this.guildRepository.getAllGuilds()
+    const guilds = await this.guildRepository.getAllGuilds();
     if (guilds.length === 0) {
       throw new Error(`Guilds not found`);
     }
 
-    const guildExperienceMap = new Map(
-      guilds.map((guild) => {
-      const totalExperience = guild.players.reduce((sum, player) => sum + player.experience, 0);
-      return [guild.id, totalExperience];
-      })
-    );
-    let minExp = 101
-    let guildWithMaxExperience = '';
+    const unassignedPlayers = players.filter((player) => !player.guildId);
 
-    for (const [key, value] of guildExperienceMap) {
-      if (value < minExp) {
-        minExp = value;
-        guildWithMaxExperience = key;
+    for (const player of unassignedPlayers) {
+      let guildsInfo: { guildId: string; guildExp: number; needsClass: boolean }[] = [];
+
+      for (const guild of guilds) {
+        if (guild.players.length >= maxGuildPlayers) {
+          continue;
+        }
+
+        const totalExperience = guild.players.reduce((sum, p) => sum + p.experience, 0);
+
+        const classes = guild.players.map((p) => p.class);
+        const needsClass = !classes.includes(player.class);
+
+        guildsInfo.push({
+          guildId: guild.id,
+          guildExp: totalExperience,
+          needsClass,
+        });
+      }
+
+      guildsInfo.sort((a, b) => {
+        if (a.needsClass && !b.needsClass) {
+          return -1;
+        }
+        if (!a.needsClass && b.needsClass) {
+          return 1;
+        }
+        if (a.guildExp < b.guildExp) {
+          return -1;
+        }
+        if (a.guildExp > b.guildExp) {
+          return 1;
+        }
+        return 0;
+      });
+
+      if (guildsInfo.length > 0) {
+        const selectedGuildId = guildsInfo[0].guildId;
+        const playerData: Prisma.PlayerUpdateInput = {
+          guild: {
+            connect: { id: selectedGuildId },
+          },
+        };
+        await this.playerRepository.updatePlayer(player.id, playerData);
+
+        const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
+        if (selectedGuild) {
+          selectedGuild.players.push(player);
+        }
+      } else {
+        console.warn(`No suitable guild found for player ${player.name}`);
       }
     }
 
-    const playerData: Prisma.PlayerUpdateInput = {
-      guild: {
-        connect: {
-          id: guildWithMaxExperience,
-        },
-      },
-    };
+    const balancedGuilds = await this.guildRepository.getAllGuilds();
+    if (balancedGuilds.length === 0) {
+      throw new Error(`Balanced guilds not found`);
+    }
 
-    return await this.playerRepository.updatePlayer(player.id, playerData);
+    return balancedGuilds;
   }
 }
