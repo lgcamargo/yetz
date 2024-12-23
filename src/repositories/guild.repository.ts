@@ -59,6 +59,12 @@ class GuildRepository {
       throw new Error('Error deleting guild: ' + error.message);
     }
   }
+
+  async getGuildByName(name: string) {
+    return await prisma.guild.findFirst({
+      where: { name },
+    });
+  }
 }
 
 export { GuildRepository };

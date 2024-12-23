@@ -2,12 +2,13 @@ import { Request, Response } from 'express';
 import { PlayerService } from '../../../services/player.service';
 import { PlayerInputDTO, PlayerOutputDTO } from './dto/player.dto';
 import { PlayerRepository } from '../../../repositories/player.repository';
+import { GuildRepository } from '../../../repositories/guild.repository';
 
 export class PlayerController {
   private playerService: PlayerService;
 
-  constructor(playerRepository: PlayerRepository) {
-    this.playerService = new PlayerService(playerRepository);
+  constructor(playerRepository: PlayerRepository, guildRepository: GuildRepository) {
+    this.playerService = new PlayerService(playerRepository, guildRepository);
   }
 
   public async createPlayer(req: Request, res: Response): Promise<void> {
@@ -74,7 +75,7 @@ export class PlayerController {
         updatedAt: player.updatedAt,
         deletedAt: player.deletedAt,
       }));
-      res.status(200).json(players);
+      res.status(200).json(outputPlayers);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -105,7 +106,7 @@ export class PlayerController {
         updatedAt: updatedPlayer.updatedAt,
         deletedAt: updatedPlayer.deletedAt,
       };
-      res.status(200).json(updatedPlayer);
+      res.status(200).json(outputPlayer);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -116,6 +117,16 @@ export class PlayerController {
       const playerId = req.params.id;
       await this.playerService.deletePlayer(playerId);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  public async balancedPlayer(req: Request, res: Response): Promise<void> {
+    try {
+      const playerId = req.params.id;
+      const balancedPlayer = await this.playerService.balancedPlayer(playerId);
+      res.status(200).json(balancedPlayer);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

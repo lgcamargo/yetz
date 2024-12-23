@@ -17,17 +17,25 @@ export class GuildService {
     return await this.guildRepository.getAllGuilds();
   }
 
-  async createGuild(guildData: GuildInputDTO): Promise<Guild> {
-    const guild: Prisma.GuildCreateInput = {
-      name: guildData.name,
+  async createGuild(guild: GuildInputDTO): Promise<Guild> {
+    const alreadyExists = await this.guildRepository.getGuildByName(guild.name);
+    if (alreadyExists) {
+      throw new Error(`Guild with name ${guild.name} already exists`);
+    }
+    const guildData: Prisma.GuildCreateInput = {
+      name: guild.name,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    return await this.guildRepository.createGuild(guild);
+    return await this.guildRepository.createGuild(guildData);
   }
 
   async updateGuild(id: string, guild: GuildInputDTO) {
+    const alreadyExists = await this.guildRepository.getGuildByName(guild.name);
+    if (alreadyExists) {
+      throw new Error(`Guild with name ${guild.name} already exists`);
+    }
     const guildData: Prisma.GuildUpdateInput = {
       name: guild.name,
       updatedAt: new Date(),

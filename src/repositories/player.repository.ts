@@ -57,6 +57,12 @@ class PlayerRepository {
       throw new Error('Error deleting player: ' + error.message);
     }
   }
+
+  async getPlayerByName(name: string) {
+    return await prisma.player.findFirst({
+      where: { name },
+    });
+  }
 }
 
 export { PlayerRepository };
