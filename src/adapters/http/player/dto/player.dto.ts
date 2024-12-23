@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Player } from "../../../../domain/entities/player.entity";
-import { IsNotEmpty, IsString, IsInt, IsOptional, Min, Max, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsString, IsInt, IsOptional, Min, Max, IsDateString, IsEnum } from 'class-validator';
 
 export class PlayerInputDTO {
   @IsNotEmpty({ message: 'Name is required' })
@@ -9,6 +9,7 @@ export class PlayerInputDTO {
 
   @IsNotEmpty({ message: 'Class is required' })
   @IsString({ message: 'Class must be a string' })
+  @IsEnum(['WARRIOR', 'MAGE', 'CLERIC'], { message: 'Class must be either warrior, mage, or CLERIC' })
   class: string;
 
   @IsInt({ message: 'Experience must be an integer' })
