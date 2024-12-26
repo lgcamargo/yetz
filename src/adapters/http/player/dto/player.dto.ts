@@ -9,7 +9,7 @@ export class PlayerInputDTO {
 
   @IsNotEmpty({ message: 'Class is required' })
   @IsString({ message: 'Class must be a string' })
-  @IsEnum(['GUERREIRO', 'MAGO','ARQUEIRO', 'CLÉRIGO'], { message: 'Class must be one of GUERREIRO, MAGO, ARQUEIRO or CLÉRICO' })
+  @IsEnum(['GUERREIRO', 'MAGO','ARQUEIRO', 'CLÉRIGO'], { message: 'Class must be one of GUERREIRO, MAGO, ARQUEIRO or CLÉRIGO' })
   class: string;
 
   @IsInt({ message: 'Experience must be an integer' })
