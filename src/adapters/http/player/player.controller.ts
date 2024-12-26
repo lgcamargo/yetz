@@ -16,8 +16,12 @@ export class PlayerController {
     try {
       const playerData: PlayerInputDTO = req.body;
 
-      const errors = await validate(playerData);
-
+      const errors = await validate(new PlayerInputDTO(req.body), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        skipMissingProperties: false,
+      });
+      
       if (errors.length > 0) {
         res.status(400).json({
           message: "Validation failed",
@@ -99,14 +103,17 @@ export class PlayerController {
   public async updatePlayer(req: Request, res: Response): Promise<void> {
     try {
       const playerId = req.params.id;
-      
       if (!playerId) {
         res.status(400).json({ message: 'Player ID is required' });
         return;
       }
       const playerData: PlayerInputDTO = req.body;
 
-      const errors = await validate(playerData);
+      const errors = await validate(new PlayerInputDTO(req.body), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        skipMissingProperties: false,
+      });
 
       if (errors.length > 0) {
         res.status(400).json({

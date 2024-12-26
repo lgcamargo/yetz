@@ -16,8 +16,12 @@ export class GuildController {
     try {
       const guildData: GuildInputDTO = req.body;
 
-      const errors = await validate(guildData);
-      
+      const errors = await validate(new GuildInputDTO(req.body), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        skipMissingProperties: false,
+      });
+
       if (errors.length > 0) {
         res.status(400).json({
           message: "Validation failed",
@@ -96,9 +100,13 @@ export class GuildController {
         return;
       }
       const guildData: GuildInputDTO = req.body;
-      
-      const errors = await validate(guildData);
-      
+
+      const errors = await validate(new GuildInputDTO(req.body), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        skipMissingProperties: false,
+      });
+
       if (errors.length > 0) {
         res.status(400).json({
           message: "Validation failed",
