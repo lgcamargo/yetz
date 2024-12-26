@@ -14,15 +14,23 @@ class PlayerRepository {
       throw new Error('Error creating player: ' + error.message);
     }
   }
-
-  async getAllPlayers() {
+  async getAllPlayers(filters?: { name?: string; class?: string; minExperience?: number; maxExperience?: number }) {
     try {
-      const players = await prisma.player.findMany();
+      const players = await prisma.player.findMany({
+        where: {
+          name: filters?.name ? { contains: filters.name, mode: 'insensitive' } : undefined,
+          class: filters?.class,
+          experience: {
+            gte: filters?.minExperience,
+            lte: filters?.maxExperience,
+          },
+        },
+      });
       return players;
     } catch (error: any) {
       throw new Error('Error fetching players: ' + error.message);
     }
-  }
+  }  
 
   async getPlayerById(playerId: string) {
     try {

@@ -1,5 +1,5 @@
 import { Player, Prisma } from '@prisma/client';
-import { PlayerInputDTO} from '../adapters/http/player/dto/player.dto';
+import { BalancedPlayersDTO, PlayerInputDTO} from '../adapters/http/player/dto/player.dto';
 import { PlayerRepository } from '../repositories/player.repository';
 import { GuildRepository } from '../repositories/guild.repository';
 import { Guild } from '../domain/entities/guild.entity';
@@ -71,11 +71,8 @@ export class PlayerService {
     return await this.playerRepository.deletePlayer(id);
   }
 
-  async balancedPlayer(maxGuildPlayers: number) {
-    const players = await this.playerRepository.getAllPlayers();
-    if (!players || players.length === 0) {
-      throw new Error(`Players not found`);
-    }
+  async balancedPlayer(body: BalancedPlayersDTO) {
+    const players = body.selectedPlayers
 
     const guilds = await this.guildRepository.getAllGuilds();
     if (guilds.length === 0) {
@@ -88,7 +85,7 @@ export class PlayerService {
       let guildsInfo: { guildId: string; guildExp: number; needsClass: boolean }[] = [];
 
       for (const guild of guilds) {
-        if (guild.players.length >= maxGuildPlayers) {
+        if (guild.players.length >= body.maxGuildPlayers) {
           continue;
         }
 
@@ -131,7 +128,7 @@ export class PlayerService {
 
         const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
         if (selectedGuild) {
-          selectedGuild.players.push(player);
+          selectedGuild.players.push(player as Player);
         }
       } else {
         console.warn(`No suitable guild found for player ${player.name}`);

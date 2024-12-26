@@ -51,3 +51,8 @@ export class PlayerOutputDTO {
     this.deletedAt = player.deletedAt || null;
   }
 }
+
+export type BalancedPlayersDTO = {
+  maxGuildPlayers: number;
+  selectedPlayers: Player[];
+}
