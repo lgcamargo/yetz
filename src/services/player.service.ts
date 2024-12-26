@@ -2,7 +2,7 @@ import { Player, Prisma } from '@prisma/client';
 import { BalancedPlayersDTO, PlayerInputDTO} from '../adapters/http/player/dto/player.dto';
 import { PlayerRepository } from '../repositories/player.repository';
 import { GuildRepository } from '../repositories/guild.repository';
-import { Guild } from '../domain/entities/guild.entity';
+import { hasRequiredClasses } from '../utils/requiredClass';
 
 export class PlayerService {
   private playerRepository: PlayerRepository;
@@ -84,6 +84,15 @@ export class PlayerService {
     for (const player of unassignedPlayers) {
       let guildsInfo: { guildId: string; guildExp: number; needsClass: boolean }[] = [];
 
+      const warriorCount = unassignedPlayers.filter(player => player.class === 'GUERREIRO').length;
+      const clericCount = unassignedPlayers.filter(player => player.class === 'CLÉRIGO').length;
+      const mageOrArcherCount = unassignedPlayers.filter(player => player.class === 'MAGO' || player.class === 'ARQUEIRO').length;
+      const guildSize = guilds.length;
+
+      if ((warriorCount < guildSize) || (clericCount < guildSize) || (mageOrArcherCount < guildSize)){
+        throw new Error(`Not enough class to distribute`);
+      }
+
       for (const guild of guilds) {
         if (guild.players.length >= body.maxGuildPlayers) {
           continue;
@@ -91,8 +100,7 @@ export class PlayerService {
 
         const totalExperience = guild.players.reduce((sum, p) => sum + p.experience, 0);
 
-        const classes = guild.players.map((p) => p.class);
-        const needsClass = !classes.includes(player.class);
+        const needsClass = hasRequiredClasses(guild)
 
         guildsInfo.push({
           guildId: guild.id,
@@ -126,7 +134,7 @@ export class PlayerService {
         };
         await this.playerRepository.updatePlayer(player.id, playerData);
 
-        const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
+        const selectedGuild = guilds.find((guild) => guild.id === selectedGuildId);
         if (selectedGuild) {
           selectedGuild.players.push(player as Player);
         }
