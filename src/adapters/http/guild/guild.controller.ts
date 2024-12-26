@@ -3,6 +3,7 @@ import { GuildService } from '../../../services/guild.service';
 import { GuildInputDTO, GuildOutputDTO } from './dto/guild.dto';
 import { GuildRepository } from '../../../repositories/guild.repository';
 import { Player } from '../../../domain/entities/player.entity';
+import { validate } from 'class-validator';
 
 export class GuildController {
   private guildService: GuildService;
@@ -14,6 +15,20 @@ export class GuildController {
   public async createGuild(req: Request, res: Response): Promise<void> {
     try {
       const guildData: GuildInputDTO = req.body;
+
+      const errors = await validate(guildData);
+      
+      if (errors.length > 0) {
+        res.status(400).json({
+          message: "Validation failed",
+          errors: errors.map((error) => ({
+            property: error.property,
+            constraints: error.constraints,
+          })),
+        });
+        return;
+      }
+      
       const newGuild = await this.guildService.createGuild(guildData);
       const outputGuild: GuildOutputDTO = {
         id: newGuild.id,
@@ -81,6 +96,20 @@ export class GuildController {
         return;
       }
       const guildData: GuildInputDTO = req.body;
+      
+      const errors = await validate(guildData);
+      
+      if (errors.length > 0) {
+        res.status(400).json({
+          message: "Validation failed",
+          errors: errors.map((error) => ({
+            property: error.property,
+            constraints: error.constraints,
+          })),
+        });
+        return;
+      }
+
       const updatedGuild = await this.guildService.updateGuild(guildId, guildData);
       if (!updatedGuild) {
         res.status(404).json({ message: 'Guild not found' });

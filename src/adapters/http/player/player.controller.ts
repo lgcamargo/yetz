@@ -3,6 +3,7 @@ import { PlayerService } from '../../../services/player.service';
 import { PlayerInputDTO, PlayerOutputDTO } from './dto/player.dto';
 import { PlayerRepository } from '../../../repositories/player.repository';
 import { GuildRepository } from '../../../repositories/guild.repository';
+import { validate } from 'class-validator';
 
 export class PlayerController {
   private playerService: PlayerService;
@@ -14,6 +15,20 @@ export class PlayerController {
   public async createPlayer(req: Request, res: Response): Promise<void> {
     try {
       const playerData: PlayerInputDTO = req.body;
+
+      const errors = await validate(playerData);
+
+      if (errors.length > 0) {
+        res.status(400).json({
+          message: "Validation failed",
+          errors: errors.map((error) => ({
+            property: error.property,
+            constraints: error.constraints,
+          })),
+        });
+        return;
+      }
+
       const newPlayer = await this.playerService.createPlayer(playerData);
       const outputPlayer: PlayerOutputDTO = {
         id: newPlayer.id,
@@ -84,11 +99,26 @@ export class PlayerController {
   public async updatePlayer(req: Request, res: Response): Promise<void> {
     try {
       const playerId = req.params.id;
+      
       if (!playerId) {
         res.status(400).json({ message: 'Player ID is required' });
         return;
       }
       const playerData: PlayerInputDTO = req.body;
+
+      const errors = await validate(playerData);
+
+      if (errors.length > 0) {
+        res.status(400).json({
+          message: "Validation failed",
+          errors: errors.map((error) => ({
+            property: error.property,
+            constraints: error.constraints,
+          })),
+        });
+        return;
+      }
+
       const updatedPlayer = await this.playerService.updatePlayer(playerId, playerData);
 
       if (!updatedPlayer) {
