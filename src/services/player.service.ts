@@ -92,7 +92,7 @@ export class PlayerService {
       classCounts.CLÉRIGO < guilds.length ||
       classCounts.MAGO_ARQUEIRO < guilds.length
     ) {
-      throw new Error(`Not enough players in each class to distribute across guilds`);
+      throw new Error(`Not enough players in each class to distribute to the guilds`);
     }
   
     const guildInfo = guilds.map((guild) => ({
@@ -104,7 +104,6 @@ export class PlayerService {
     const getNextGuild = (className: string) => {
       const eligibleGuilds = guildInfo.filter((guild) => guild.players.length < maxPlayers);
       if (eligibleGuilds.length === 0) {
-        console.warn(`No guilds with capacity found for class: ${className}`);
         return null;
       }
 
@@ -130,7 +129,6 @@ export class PlayerService {
     
     for (const player of unassignedPlayers) {
       const guild = getNextGuild(player.class);
-      console.log('suitable guild: ', guild);
       if (!guild) {
         console.warn(`No guild found for player ${player.name}`);
         continue;
@@ -141,7 +139,7 @@ export class PlayerService {
       };
       await this.playerRepository.updatePlayer(player.id, playerData);
   
-      //atualiza guildas que estão sendo verificadas
+      //atualiza guildas localmente
       guild.players.push(player as Player);
       guild.totalExp += player.experience;
     }
