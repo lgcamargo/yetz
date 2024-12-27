@@ -125,7 +125,7 @@ describe('PlayerService', () => {
       guildRepository.getAllGuilds.mockResolvedValue(guilds);
 
       await expect(playerService.balancedPlayer(body)).rejects.toThrow(
-        'Not enough class to distribute'
+        'Not enough players in each class to distribute across guilds'
       );
     });
   });

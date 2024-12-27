@@ -72,75 +72,78 @@ export class PlayerService {
   }
 
   async balancedPlayer(body: BalancedPlayersDTO) {
-    const players = body.selectedPlayers
-
+    const players = body.selectedPlayers;
+    const maxPlayers = body.maxGuildPlayers;
     const guilds = await this.guildRepository.getAllGuilds();
     if (guilds.length === 0) {
       throw new Error(`Guilds not found`);
     }
 
     const unassignedPlayers = players.filter((player) => !player.guildId);
-
-    for (const player of unassignedPlayers) {
-      let guildsInfo: { guildId: string; guildExp: number; needsClass: boolean }[] = [];
-
-      const warriorCount = unassignedPlayers.filter(player => player.class === 'GUERREIRO').length;
-      const clericCount = unassignedPlayers.filter(player => player.class === 'CLÉRIGO').length;
-      const mageOrArcherCount = unassignedPlayers.filter(player => player.class === 'MAGO' || player.class === 'ARQUEIRO').length;
-      const guildSize = guilds.length;
-
-      if ((warriorCount < guildSize) || (clericCount < guildSize) || (mageOrArcherCount < guildSize)){
-        throw new Error(`Not enough class to distribute`);
+  
+    const classCounts = {
+      GUERREIRO: unassignedPlayers.filter((p) => p.class === 'GUERREIRO').length,
+      CLÉRIGO: unassignedPlayers.filter((p) => p.class === 'CLÉRIGO').length,
+      MAGO_ARQUEIRO: unassignedPlayers.filter((p) => ['MAGO', 'ARQUEIRO'].includes(p.class)).length,
+    };
+  
+    if (
+      classCounts.GUERREIRO < guilds.length ||
+      classCounts.CLÉRIGO < guilds.length ||
+      classCounts.MAGO_ARQUEIRO < guilds.length
+    ) {
+      throw new Error(`Not enough players in each class to distribute across guilds`);
+    }
+  
+    const guildInfo = guilds.map((guild) => ({
+      id: guild.id,
+      players: [...guild.players],
+      totalExp: guild.players.reduce((sum, player) => sum + player.experience, 0),
+    }));
+  
+    const getNextGuild = (className: string) => {
+      const eligibleGuilds = guildInfo.filter((guild) => guild.players.length < maxPlayers);
+      if (eligibleGuilds.length === 0) {
+        console.warn(`No guilds with capacity found for class: ${className}`);
+        return null;
       }
 
-      for (const guild of guilds) {
-        if (guild.players.length >= body.maxGuildPlayers) {
-          continue;
-        }
-
-        const totalExperience = guild.players.reduce((sum, p) => sum + p.experience, 0);
-
-        const needsClass = hasRequiredClasses(guild)
-
-        guildsInfo.push({
-          guildId: guild.id,
-          guildExp: totalExperience,
-          needsClass,
-        });
-      }
-
-      guildsInfo.sort((a, b) => {
-        if (a.needsClass && !b.needsClass) {
-          return -1;
-        }
-        if (!a.needsClass && b.needsClass) {
-          return 1;
-        }
-        if (a.guildExp < b.guildExp) {
-          return -1;
-        }
-        if (a.guildExp > b.guildExp) {
-          return 1;
-        }
-        return 0;
+      //ordenação de guils baseado em necessidade de classe, caso não tenha valida a com menor experiência
+      const sortedGuilds = eligibleGuilds.sort((a, b) => {
+        const aNeedsClass = !a.players.some((p) => p.class === className);
+        const bNeedsClass = !b.players.some((p) => p.class === className);
+    
+        if (aNeedsClass && !bNeedsClass) return -1;
+        if (!aNeedsClass && bNeedsClass) return 1;
+    
+        return a.totalExp - b.totalExp;
       });
-
-      if (guildsInfo.length > 0) {
-        const selectedGuildId = guildsInfo[0].guildId;
-        const playerData: Prisma.PlayerUpdateInput = {
-          guild: {
-            connect: { id: selectedGuildId },
-          },
-        };
-        await this.playerRepository.updatePlayer(player.id, playerData);
-
-        const selectedGuild = guilds.find((guild) => guild.id === selectedGuildId);
-        if (selectedGuild) {
-          selectedGuild.players.push(player as Player);
-        }
-      } else {
-        console.warn(`No suitable guild found for player ${player.name}`);
+    
+      const selectedGuild = sortedGuilds[0];
+    
+      if (!selectedGuild) {
+        console.warn(`No guild found for class: ${className}`);
       }
+    
+      return selectedGuild;
+    };
+    
+    for (const player of unassignedPlayers) {
+      const guild = getNextGuild(player.class);
+      console.log('suitable guild: ', guild);
+      if (!guild) {
+        console.warn(`No guild found for player ${player.name}`);
+        continue;
+      }
+
+      const playerData: Prisma.PlayerUpdateInput = {
+        guild: { connect: { id: guild.id } },
+      };
+      await this.playerRepository.updatePlayer(player.id, playerData);
+  
+      //atualiza guildas que estão sendo verificadas
+      guild.players.push(player as Player);
+      guild.totalExp += player.experience;
     }
 
     const balancedGuilds = await this.guildRepository.getAllGuilds();
@@ -149,7 +152,7 @@ export class PlayerService {
     }
 
     return balancedGuilds;
-  }
+  }  
 
   async resetPlayersGuild() {
     const players = await this.playerRepository.getAllPlayers();
