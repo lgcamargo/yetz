@@ -1,6 +1,7 @@
 import express from 'express';
 import playerRouter from './routes/player.route';
 import guildRouter from './routes/guild.route';
+import 'reflect-metadata';
 import dotenv from 'dotenv';
 import cors from 'cors';
 

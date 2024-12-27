@@ -4,6 +4,7 @@ import { BalancedPlayersDTO, PlayerInputDTO, PlayerOutputDTO } from './dto/playe
 import { PlayerRepository } from '../../../repositories/player.repository';
 import { GuildRepository } from '../../../repositories/guild.repository';
 import { validate } from 'class-validator';
+import 'reflect-metadata';
 
 export class PlayerController {
   private playerService: PlayerService;
